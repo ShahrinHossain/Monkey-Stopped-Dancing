@@ -10,8 +10,7 @@ pycache/
 *.log
 
 
-data/
-backend/data/
+backend/data/processed
 *.jsonl
 *.bin
 *.npy

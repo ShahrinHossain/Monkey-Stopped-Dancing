@@ -183,7 +183,7 @@ def batch_labeling(queries: List[str], output_csv: str, annotator: str,
         while True:
             response = input("Relevant? (y/n/s/q): ").strip().lower()
             if response in ("q", "quit"):
-                    print("\nExiting.")
+                print("\nExiting.")
                 return
             if response in ("s", "skip"):
                 break

@@ -1,1 +1,11 @@
 {"query":"recent flood in sylhet","relevant_urls":["https://www.thedailystar.net/....","https://www.thedailystar.net/...."]}
+// {"query_id": "q1", "query_text": "আওয়ামী লীগ সাম্প্রতিক খবর", "relevant_doc_ids": [45, 123, 456, 789]}
+// {"query_id": "q2", "query_text": "Bangladesh cricket world cup", "relevant_doc_ids": [12, 89, 234]}
+// {"query_id": "q3", "query_text": "সিলেট বন্যা ২০২৪", "relevant_doc_ids": [67, 145, 289, 312, 445]}
+// {"query_id": "q4", "query_text": "Padma Bridge construction", "relevant_doc_ids": [23, 56, 178]}
+// {"query_id": "q5", "query_text": "ঢাকা ট্রাফিক জ্যাম", "relevant_doc_ids": [34, 112, 267, 398]}
+// {"query_id": "q6", "query_text": "Sheikh Hasina news", "relevant_doc_ids": [90, 156, 234, 567, 789]}
+// {"query_id": "q7", "query_text": "রোহিঙ্গা শরণার্থী", "relevant_doc_ids": [78, 134, 256]}
+// {"query_id": "q8", "query_text": "Bangladesh economy growth", "relevant_doc_ids": [45, 189, 345, 567]}
+// {"query_id": "q9", "query_text": "চট্টগ্রাম বন্দর", "relevant_doc_ids": [23, 67, 123, 289]}
+// {"query_id": "q10", "query_text": "Dhaka University admission", "relevant_doc_ids": [56, 145, 278, 390, 456]}
