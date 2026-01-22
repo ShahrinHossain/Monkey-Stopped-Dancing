@@ -1,48 +1,9 @@
 # backend/clir/evaluation.py
 """
-Module D — Ranking, Scoring, & Evaluation (Core)
+Module D — Ranking, Scoring & Evaluation
 
-What this file does (as required by the assignment screenshots):
-
-1) Ranking & Scoring
-- Implements a ranking function that outputs a sorted list of top-K documents for each query.
-- Outputs a Matching Confidence score (0–1) for each document.
-- Normalizes model scores to [0, 1] before combining.
-- Shows a low-confidence warning if the top result confidence < threshold (default 0.20).
-
-2) Evaluation Metrics (Mandatory)
-- Precision@10
-- Recall@50
-- nDCG@10
-- MRR
-
-How to run:
-  cd backend
-  python -m clir.evaluation --help
-
-Typical run (with a qrels file):
-  python -m clir.evaluation --qrels data/eval/qrels.jsonl --model hybrid --top_k 10
-
-QRELS (ground-truth) file format:
-- JSONL (one JSON per line), each line like:
-  {
-    "query": "good and bad news of sylhet",
-    "relevant_urls": [
-      "https://example.com/news1",
-      "https://example.com/news2"
-    ]
-  }
-
-Why URLs?
-- Your dataset records contain "url" and it is stable for matching across languages/models.
-
-Notes:
-- This module does NOT do web search (Google/Bing) because that requires external API/web access.
-  For your report, you can manually compare a few queries with Google/Bing and write the analysis.
-
-Dependencies:
-- Uses your Module C engine:
-    from clir.query_retrieval import QueryRetrievalEngine
+Implements ranking with confidence scores, evaluation metrics (Precision@10,
+Recall@50, nDCG@10, MRR), and timing analysis.
 """
 
 from __future__ import annotations
@@ -75,7 +36,6 @@ class RankedDocument:
     # normalized (0..1) score for the model chosen
     matching_confidence: float
 
-    # optional debug fields copied from Module C results
     raw_score: float
     matched_keywords: List[str]
     evidence_lines: List[str]
@@ -92,6 +52,13 @@ class QueryEvaluationResult:
     recall_at_50: Optional[float] = None
     ndcg_at_10: Optional[float] = None
     mrr: Optional[float] = None
+    
+    # Timing information (in milliseconds)
+    total_retrieval_time_ms: Optional[float] = None
+    translation_time_ms: Optional[float] = None
+    embedding_time_ms: Optional[float] = None
+    ranking_time_ms: Optional[float] = None
+    timing_breakdown: Optional[Dict[str, float]] = None
 
 
 # -----------------------------
@@ -229,11 +196,43 @@ class RankingAndScoringEngine:
         top_confidence = ranked_documents[0].matching_confidence if ranked_documents else 0.0
         warning_low_confidence = bool(ranked_documents) and (top_confidence < self.low_confidence_threshold)
 
+        # Extract timing information from Module C output
+        timings_ms = module_c_output.get("timings_ms", {})
+        module_b_debug = module_c_output.get("module_b", {})
+        module_b_timings = module_b_debug.get("timings_ms", {}) if module_b_debug else {}
+        
+        # Calculate detailed timing breakdown
+        total_retrieval_time = timings_ms.get("total", 0.0)
+        translation_time = module_b_timings.get("translation", 0.0)
+        
+        # Embedding time is part of retrieval (semantic model)
+        # We approximate it as semantic retrieval time if available
+        embedding_time = 0.0  # Will be calculated if semantic model is used
+        
+        # Ranking time = total - module_b - retrieval (approximation)
+        ranking_time = max(0.0, total_retrieval_time - timings_ms.get("module_b_processing", 0.0) - 
+                          timings_ms.get("bn_retrieval", 0.0) - timings_ms.get("en_retrieval", 0.0))
+        
+        timing_breakdown = {
+            "total_retrieval": total_retrieval_time,
+            "query_processing": timings_ms.get("module_b_processing", 0.0),
+            "translation": translation_time,
+            "bn_retrieval": timings_ms.get("bn_retrieval", 0.0),
+            "en_retrieval": timings_ms.get("en_retrieval", 0.0),
+            "ranking": ranking_time,
+            **{k: v for k, v in module_b_timings.items() if k != "translation"},  # Other module B timings
+        }
+
         return QueryEvaluationResult(
             query=user_query,
             ranked_documents=ranked_documents,
             warning_low_confidence=warning_low_confidence,
             top_confidence=top_confidence,
+            total_retrieval_time_ms=total_retrieval_time,
+            translation_time_ms=translation_time,
+            embedding_time_ms=embedding_time,
+            ranking_time_ms=ranking_time,
+            timing_breakdown=timing_breakdown,
         )
 
 
@@ -401,10 +400,9 @@ def print_ranked_results(query_result: QueryEvaluationResult) -> None:
 
     if query_result.warning_low_confidence:
         print(
-            f"⚠ Warning: Retrieved results may not be relevant. Matching confidence is low "
-            f"(score: {query_result.top_confidence:.2f})."
+            f"Warning: Low matching confidence (score: {query_result.top_confidence:.2f}). "
+            f"Results may not be relevant."
         )
-        print("Consider rephrasing your query or checking translation quality.")
 
     print("-" * 90)
     for rank_index, doc in enumerate(query_result.ranked_documents, start=1):
@@ -423,6 +421,14 @@ def print_ranked_results(query_result: QueryEvaluationResult) -> None:
             f"nDCG@10={query_result.ndcg_at_10:.3f} | "
             f"MRR={query_result.mrr:.3f}"
         )
+    
+    if query_result.total_retrieval_time_ms is not None:
+        print("-" * 90)
+        print(f"Total Retrieval Time: {query_result.total_retrieval_time_ms:.2f} ms")
+        if query_result.timing_breakdown:
+            for key, value in query_result.timing_breakdown.items():
+                if value > 0:
+                    print(f"  {key}: {value:.2f} ms")
 
 
 def print_summary(summary: Dict[str, float]) -> None:

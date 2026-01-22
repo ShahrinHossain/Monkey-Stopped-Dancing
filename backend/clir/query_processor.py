@@ -1,24 +1,9 @@
 # backend/clir/query_processor.py
 """
-Module B — Query Processing & Cross-Lingual Handling (Core)
+Module B — Query Processing & Cross-Lingual Handling
 
-Implements:
-1) Language Detection (Bangla / English / Mixed)
-2) Normalization
-3) Query Conversion/Translation (Required)
-4) Query Expansion (Recommended)
-5) Named-Entity (NE) Extraction + Mapping (Recommended)
-
-Designed to work with your dataset in:
-backend/data/processed/bn.jsonl
-backend/data/processed/en.jsonl
-
-Records have keys like:
-{ "title", "body", "url", "date", "language", "tokens_count" }
-
-✅ This version additionally outputs:
-- retrieval_queries: clean queries to feed Module C (no token-soup)
-- retrieval_keywords: important keywords only (stopwords removed)
+Implements language detection, normalization, translation, query expansion,
+and named entity extraction/mapping for cross-lingual information retrieval.
 """
 
 from __future__ import annotations
@@ -103,7 +88,6 @@ BN_STOPWORDS = {
     "বল", "বলো", "বলুন", "দাও", "দিন", "দেখাও", "ব্যাখ্যা",
 }
 
-# used by your BN heuristic NER
 BANGLA_STOPWORDS_MINI = BN_STOPWORDS
 
 
@@ -468,9 +452,8 @@ class QueryProcessingResult:
     timings_ms: Dict[str, float]
     debug: Dict[str, Any]
 
-    # ✅ New for Module C
-    retrieval_queries: Dict[str, List[str]]  # clean retrieval queries
-    retrieval_keywords: Dict[str, List[str]]  # important words only
+    retrieval_queries: Dict[str, List[str]]
+    retrieval_keywords: Dict[str, List[str]]
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -560,7 +543,6 @@ class QueryProcessor:
 
         named_entity_time = time.perf_counter()
 
-        # expanded_queries kept for debugging / analysis
         expanded_queries: Dict[str, List[str]] = {"bn": [], "en": []}
 
         if primary_language == "bn":
@@ -627,9 +609,7 @@ class QueryProcessor:
                 seen_query_strings.add(candidate_query)
             expanded_queries[language_key] = cleaned_query_list
 
-        # -----------------------------
-        # ✅ retrieval_queries / retrieval_keywords (for Module C)
-        # -----------------------------
+        # Build retrieval queries and keywords for Module C
         retrieval_queries: Dict[str, List[str]] = {"bn": [], "en": []}
 
         # Use only clean normalized query per language (NO token-soup)
@@ -723,7 +703,6 @@ def build_queries_for_retrieval(processed_query_result: QueryProcessingResult, t
 
 
 # -----------------------------
-# Minimal CLI test (optional)
 # -----------------------------
 
 if __name__ == "__main__":
@@ -735,9 +714,4 @@ if __name__ == "__main__":
             break
 
         processing_result = query_processor.process(user_query)
-
         print(json.dumps(processing_result.to_dict(), ensure_ascii=False, indent=2))
-        print("BN retrieval queries:", build_queries_for_retrieval(processing_result, "bn"))
-        print("EN retrieval queries:", build_queries_for_retrieval(processing_result, "en"))
-        print("BN keywords:", processing_result.retrieval_keywords.get("bn", []))
-        print("EN keywords:", processing_result.retrieval_keywords.get("en", []))
