@@ -286,11 +286,42 @@ Create `data/eval/qrels.jsonl` with one JSON object per line:
 {"query": "ঢাকার খবর", "relevant_urls": ["https://example.com/dhaka1"]}
 ```
 
+**Quick Generation**: To automatically generate a qrels file from query results:
+
+```bash
+cd backend
+python -m scripts.generate_qrels \
+    --queries data/eval/example_queries.txt \
+    --output data/eval/qrels.jsonl \
+    --top_k 10
+```
+
+This runs each query, retrieves top-k documents, and uses their URLs as "relevant" in the qrels file. Useful for testing, but metrics may be artificially high. For accurate evaluation, use the relevance labeling tool below.
+
 ---
 
 ## Utility Tools
 
-### 1. Relevance Labeling Tool
+### 1. Generate QRELS from Query Results
+
+**Purpose**: Automatically generate qrels.jsonl by running queries and using retrieved documents as relevant.
+
+```bash
+cd backend
+python -m scripts.generate_qrels \
+    --queries data/eval/example_queries.txt \
+    --output data/eval/qrels.jsonl \
+    --top_k 10
+```
+
+**Options**:
+- `--queries`: Path to queries file (default: `data/eval/example_queries.txt`)
+- `--output`: Output qrels file path (default: `data/eval/qrels.jsonl`)
+- `--top_k`: Number of top documents to use as relevant per query (default: 10)
+
+**Note**: This method marks retrieved documents as relevant, so evaluation metrics will be high. For accurate evaluation, use the relevance labeling tool below.
+
+### 2. Relevance Labeling Tool
 
 **Purpose**: Manually label query-document pairs as relevant/not relevant.
 
