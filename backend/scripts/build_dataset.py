@@ -39,13 +39,18 @@ SKIP_SUBSTRINGS = (
 )
 
 def should_skip_url(url: str) -> bool:
-    u = url.lower().split("?", 1)[0]  
+    u = url.lower().split("?", 1)[0] 
+
+    if "dailynewnation.com" in u and "bangla" in u:
+        return True
+
     if u.endswith(SKIP_EXTENSIONS):
         return True
     for s in SKIP_SUBSTRINGS:
         if s in u:
             return True
     return False
+
 
 
 def load_existing_urls(jsonl_path: str) -> set:
@@ -100,6 +105,26 @@ def detect_topic(title: str, body: str, url: str) -> str:
 
     return best_topic
 
+def to_record_force_en(doc):
+    """
+    Force an English record for Daily New Nation, bypassing language checks.
+    Keeps a minimal sanity check to avoid empty/junk pages.
+    """
+    title = (doc.get("title") or "").strip()
+    body = (doc.get("body") or "").strip()
+    url = doc.get("url")
+
+    if not url or not body or len(body) < 200:
+        return None
+
+    return {
+        "title": title,
+        "body": body,
+        "language": "en",
+        "url": url,
+     }
+
+
 
 def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int, max_urls: int = 5000):
     urls = get_sitemap_urls(site_base)
@@ -152,11 +177,22 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
                 time.sleep(CRAWL_DELAY)
                 continue
 
-            rec = to_record(doc, expected_language)
+            # rec = to_record(doc, expected_language)
+            # if not rec:
+            #     stats["lang_reject"] += 1
+            #     time.sleep(CRAWL_DELAY)
+            #     continue
+            if "dailynewnation.com" in url:
+            # Force-save as English for this known-English newspaper
+                rec = to_record_force_en(doc)
+            else:
+                rec = to_record(doc, expected_language)
+
             if not rec:
                 stats["lang_reject"] += 1
                 time.sleep(CRAWL_DELAY)
                 continue
+
 
             # enforce topic diversity before saving
             t = detect_topic(doc.get("title", ""), doc.get("body", ""), doc.get("url", url))
@@ -181,15 +217,16 @@ def main():
     
     bn_sites = [
         "https://bangla.bdnews24.com",
-        "https://www.prothomalo.com",
-        "https://banglatribune.com",
-        "https://www.dhakapost.com",
+        # "https://www.prothomalo.com",
+        # "https://banglatribune.com",
+        # "https://www.dhakapost.com",
     ]
 
     en_sites = [
-        "https://www.dhakatribune.com",
-        "https://www.thedailystar.net",
+        # "https://www.dhakatribune.com",
+        # "https://www.thedailystar.net",
         "https://www.newagebd.net",
+        "https://www.banglanews24.com",
         "https://www.dailynewnation.com",
         "https://www.daily-sun.com",
     ]
@@ -221,3 +258,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
