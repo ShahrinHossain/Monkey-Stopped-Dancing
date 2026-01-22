@@ -1,28 +1,9 @@
 # backend/clir/query_retrieval.py
 """
-Module C — Retrieval Models (Core)
+Module C — Retrieval Models
 
-This file:
-- Calls Module B QueryProcessor to get:
-    - retrieval_queries  ✅ (clean queries for retrieval)
-    - retrieval_keywords ✅ (important keywords only; stopwords removed)
-- Loads your dataset from:
-    backend/data/processed/en.jsonl
-    backend/data/processed/bn.jsonl
-- Implements and compares retrieval models:
-  Model 1: Lexical Retrieval (TF-IDF + BM25)
-  Model 2: Fuzzy/Transliteration Matching (RapidFuzz or difflib fallback)
-  Model 3: Semantic Matching (sentence-transformers embeddings)
-  Model 4: Hybrid Ranking (weighted fusion)
-
-✅ FIX INCLUDED:
-- Evidence matching now uses ONLY `retrieval_keywords` from Module B.
-- Words like: what/where/are/the/and will NOT be used for matching (because Module B removed them).
-- Also uses word-boundary matching for English (so partial matches don't trigger).
-
-Run:
-  cd backend
-  python -m clir.query_retrieval
+Implements multiple retrieval models: BM25, TF-IDF, Fuzzy matching,
+Semantic matching (multilingual embeddings), and Hybrid fusion.
 """
 
 from __future__ import annotations
@@ -95,7 +76,6 @@ class ScoredResult:
     score: float
     model: str
 
-    # ✅ Evidence fields for debugging/demo
     matched_keywords: List[str]
     evidence_lines: List[str]
 
@@ -397,7 +377,7 @@ def fuse_scores(
 
 
 # -----------------------------
-# Evidence Matching (FIXED)
+# Evidence Matching
 # -----------------------------
 
 _SENTENCE_SPLIT_RE = re.compile(r"(?:\r?\n)+|(?<=[\.\!\?।])\s+", flags=re.UNICODE)
@@ -414,10 +394,9 @@ def find_evidence_lines_for_document(
     max_lines: int = 3,
 ) -> Tuple[List[str], List[str]]:
     """
-    Returns (matched_keywords, evidence_lines)
-    ✅ Uses ONLY keywords provided (which come from Module B retrieval_keywords).
-    ✅ For English uses word boundary matching.
-    ✅ For Bangla uses substring match (works reasonably for BN script).
+    Returns (matched_keywords, evidence_lines).
+    Uses keywords from Module B retrieval_keywords.
+    English uses word boundary matching, Bengali uses substring match.
     """
     keywords = [k.strip() for k in (keywords or []) if k and k.strip()]
     if not keywords:
@@ -670,15 +649,12 @@ class QueryRetrievalEngine:
         module_b_result: QueryProcessingResult = self.query_processor.process(user_query)
         module_b_dict = module_b_result.to_dict()
 
-        # ✅ FIX: Use ONLY retrieval_queries from Module B for retrieval
         retrieval_queries_bn = module_b_dict.get("retrieval_queries", {}).get("bn", []) or []
         retrieval_queries_en = module_b_dict.get("retrieval_queries", {}).get("en", []) or []
 
-        # ✅ FIX: Use ONLY retrieval_keywords from Module B for evidence matching
         retrieval_keywords_bn = module_b_dict.get("retrieval_keywords", {}).get("bn", []) or []
         retrieval_keywords_en = module_b_dict.get("retrieval_keywords", {}).get("en", []) or []
 
-        # Fallback safety (should rarely happen)
         if not retrieval_queries_bn:
             retrieval_queries_bn = module_b_result.expanded_queries.get("bn", [])[:1] or [module_b_result.normalized_query]
         if not retrieval_queries_en:
@@ -751,12 +727,10 @@ if __name__ == "__main__":
 
         output = retrieval_engine.search(user_query, top_k=5, model="all", include_debug=True)
 
-        # Print the keywords used (so you can verify no stopwords appear)
         module_b = output.get("module_b", {})
-        print("\nUsed EN keywords:", module_b.get("retrieval_keywords", {}).get("en", []))
-        print("Used BN keywords:", module_b.get("retrieval_keywords", {}).get("bn", []))
+        print("\nEN keywords:", module_b.get("retrieval_keywords", {}).get("en", []))
+        print("BN keywords:", module_b.get("retrieval_keywords", {}).get("bn", []))
 
-        # Print results for each model simultaneously (EN + BN)
         for model_name in ["bm25", "tfidf", "fuzzy", "semantic", "hybrid"]:
             if model_name in output.get("en", {}):
                 _print_results_block("EN", model_name, output["en"][model_name])

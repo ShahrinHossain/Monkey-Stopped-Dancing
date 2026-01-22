@@ -1,0 +1,14 @@
+# Example Queries for CLIR Evaluation
+# One query per line
+# Lines starting with # are comments
+
+good and bad news of sylhet
+recent flood in sylhet
+ঢাকার খবর
+বাংলাদেশের অর্থনীতি
+education system in Bangladesh
+শিক্ষা ব্যবস্থা
+news about Dhaka
+সিলেটের বন্যা
+Bangladesh economy
+রাজনীতি

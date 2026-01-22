@@ -1,5 +1,6 @@
 import time
 import json
+import os
 from tqdm import tqdm
 from crawler.url_discovery import get_sitemap_urls
 from crawler.article_extractor import fetch_and_extract
@@ -119,17 +120,20 @@ def to_record_force_en(doc):
 
 
 
-def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int, max_urls: int = 5000):
 def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int):
     urls = get_sitemap_urls(site_base)
 
     kept = 0
     seen = set()
+    existing_urls = load_existing_urls(out_path)
+    seen.update(existing_urls)
 
     for url in tqdm(urls, desc=f"{site_base}"):
         if kept >= limit:
             break
         if url in seen:
+            continue
+        if should_skip_url(url):
             continue
         seen.add(url)
 
@@ -138,26 +142,12 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
             if not doc:
                 continue
 
-            # rec = to_record(doc, expected_language)
-            # if not rec:
-            #     stats["lang_reject"] += 1
-            #     time.sleep(CRAWL_DELAY)
-            #     continue
             if "dailynewnation.com" in url:
-            # Force-save as English for this known-English newspaper
                 rec = to_record_force_en(doc)
             else:
                 rec = to_record(doc, expected_language)
 
             if not rec:
-                stats["lang_reject"] += 1
-                time.sleep(CRAWL_DELAY)
-                continue
-
-
-            # enforce topic diversity before saving
-            t = detect_topic(doc.get("title", ""), doc.get("body", ""), doc.get("url", url))
-            if topic_counts[t] >= MAX_PER_TOPIC:
                 time.sleep(CRAWL_DELAY)
                 continue
 
