@@ -32,22 +32,24 @@ def to_record(doc: Dict[str, Any], expected_language: str) -> Optional[Dict[str,
         return None
     
     # Language detection/validation
-    detected_language = expected_language  # default to expected
+    detected_language = expected_language
     try:
-        # Try to detect language from title + body
         text_sample = f"{title} {body[:500]}"
         detected = detect(text_sample)
-        # Map langdetect codes to our codes
-        if detected in ("bn", "bg"):  # bg might be misdetected Bengali
+        if detected in ("bn", "bg"):
             detected_language = "bn"
         elif detected == "en":
             detected_language = "en"
         else:
-            # If detection doesn't match expected, use expected
             detected_language = expected_language
     except (LangDetectException, Exception):
-        # Fallback to expected language if detection fails
         detected_language = expected_language
+    
+    # Enforce expected language
+    if expected_language == "bn" and detected_language != "bn":
+        return None
+    if expected_language == "en" and detected_language != "en":
+        return None
     
     # Count tokens (simple word count)
     tokens_count = len(body.split()) + len(title.split())
@@ -57,7 +59,7 @@ def to_record(doc: Dict[str, Any], expected_language: str) -> Optional[Dict[str,
         "body": body,
         "url": url,
         "date": date,
-        "language": detected_language,
+        "language": expected_language,
         "tokens_count": tokens_count,
     }
     
@@ -73,10 +75,8 @@ def append_jsonl(file_path: str, record: Dict[str, Any]) -> None:
         file_path: Path to the JSONL file
         record: Dictionary to append as a JSON line
     """
-    # Create directory if needed
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
     
-    # Append to file
     with open(file_path, "a", encoding="utf-8") as f:
         json_line = json.dumps(record, ensure_ascii=False)
         f.write(json_line + "\n")
