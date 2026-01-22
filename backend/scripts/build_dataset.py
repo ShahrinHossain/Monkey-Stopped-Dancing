@@ -7,7 +7,6 @@ from crawler.validate_and_save import to_record, append_jsonl
 
 CRAWL_DELAY = 1.0  # polite delay
 
-<<<<<<< HEAD
 TOPIC_KEYWORDS = {
     "sports": ["sport", "match", "tournament", "goal", "cricket", "football", "বিশ্বকাপ", "ম্যাচ", "খেলা"],
     "politics": ["election", "minister", "parliament", "government", "নির্বাচন", "মন্ত্রী", "সরকার"],
@@ -121,9 +120,7 @@ def to_record_force_en(doc):
 
 
 def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int, max_urls: int = 5000):
-=======
 def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int):
->>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
     urls = get_sitemap_urls(site_base)
 
     kept = 0
@@ -153,7 +150,6 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
                 rec = to_record(doc, expected_language)
 
             if not rec:
-<<<<<<< HEAD
                 stats["lang_reject"] += 1
                 time.sleep(CRAWL_DELAY)
                 continue
@@ -163,8 +159,6 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
             t = detect_topic(doc.get("title", ""), doc.get("body", ""), doc.get("url", url))
             if topic_counts[t] >= MAX_PER_TOPIC:
                 time.sleep(CRAWL_DELAY)
-=======
->>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
                 continue
 
             append_jsonl(out_path, rec)
@@ -178,26 +172,14 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
 def main():
     # You should load these from yaml later; hardcoding is OK for first run.
     bn_sites = [
-<<<<<<< HEAD
         "https://bangla.bdnews24.com",
         # "https://www.prothomalo.com",
         # "https://banglatribune.com",
         # "https://www.dhakapost.com",
-=======
-        "https://www.prothomalo.com",
-        "https://bangla.bdnews24.com",
-        "https://www.kalerkantho.com",
-        "https://banglatribune.com",
-        "https://www.dhakapost.com",
->>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
     ]
     en_sites = [
-<<<<<<< HEAD
         # "https://www.dhakatribune.com",
         # "https://www.thedailystar.net",
-=======
-        "https://www.thedailystar.net",
->>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
         "https://www.newagebd.net",
         "https://www.banglanews24.com",
         "https://www.dailynewnation.com",
