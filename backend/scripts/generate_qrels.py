@@ -16,6 +16,16 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from clir.evaluation import RankingAndScoringEngine
 
 
+def _normalize_url(url: str) -> str:
+    """Normalize URL for comparison (strip, remove trailing slash)."""
+    if not url:
+        return ""
+    url = str(url).strip()
+    if url.endswith("/"):
+        url = url[:-1]
+    return url
+
+
 def load_queries(queries_path: str) -> List[str]:
     """Load queries from a text file (one per line, # for comments)."""
     queries = []
@@ -48,7 +58,7 @@ def generate_qrels(queries: List[str], output_path: str, top_k: int = 10) -> Non
             include_debug=False,
         )
         
-        relevant_urls = [doc.url for doc in result.ranked_documents if doc.url]
+        relevant_urls = [_normalize_url(doc.url) for doc in result.ranked_documents if doc.url]
         
         if relevant_urls:
             qrels_entries.append({

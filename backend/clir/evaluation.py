@@ -240,13 +240,23 @@ class RankingAndScoringEngine:
 # Evaluation metrics (Mandatory)
 # -----------------------------
 
+def _normalize_url(url: str) -> str:
+    """Normalize URL for comparison (strip, remove trailing slash)."""
+    if not url:
+        return ""
+    url = str(url).strip()
+    if url.endswith("/"):
+        url = url[:-1]
+    return url
+
+
 def precision_at_k(ranked_urls: List[str], relevant_urls: Set[str], k: int) -> float:
     if k <= 0:
         return 0.0
     top_k = ranked_urls[:k]
     if not top_k:
         return 0.0
-    relevant_in_top_k = sum(1 for url in top_k if url in relevant_urls)
+    relevant_in_top_k = sum(1 for url in top_k if _normalize_url(url) in relevant_urls)
     return relevant_in_top_k / float(k)
 
 
@@ -254,7 +264,7 @@ def recall_at_k(ranked_urls: List[str], relevant_urls: Set[str], k: int) -> floa
     if not relevant_urls:
         return 0.0
     top_k = ranked_urls[:k]
-    retrieved_relevant = sum(1 for url in top_k if url in relevant_urls)
+    retrieved_relevant = sum(1 for url in top_k if _normalize_url(url) in relevant_urls)
     return retrieved_relevant / float(len(relevant_urls))
 
 
@@ -273,7 +283,7 @@ def dcg_at_k(binary_relevance: List[int], k: int) -> float:
 def ndcg_at_k(ranked_urls: List[str], relevant_urls: Set[str], k: int) -> float:
     if k <= 0:
         return 0.0
-    relevance_list = [1 if url in relevant_urls else 0 for url in ranked_urls[:k]]
+    relevance_list = [1 if _normalize_url(url) in relevant_urls else 0 for url in ranked_urls[:k]]
     ideal_list = sorted(relevance_list, reverse=True)
 
     dcg_value = dcg_at_k(relevance_list, k)
@@ -290,7 +300,7 @@ def mean_reciprocal_rank(ranked_urls: List[str], relevant_urls: Set[str]) -> flo
       1 / rank_of_first_relevant
     """
     for index, url in enumerate(ranked_urls):
-        if url in relevant_urls:
+        if _normalize_url(url) in relevant_urls:
             return 1.0 / float(index + 1)
     return 0.0
 
@@ -351,7 +361,7 @@ class Evaluator:
         for item in qrels_items:
             query_text = str(item.get("query", "")).strip()
             relevant_urls_list = item.get("relevant_urls", []) or []
-            relevant_urls = set(str(u).strip() for u in relevant_urls_list if str(u).strip())
+            relevant_urls = set(_normalize_url(u) for u in relevant_urls_list if _normalize_url(u))
 
             ranking_result = self.ranking_engine.rank(
                 user_query=query_text,
@@ -360,7 +370,7 @@ class Evaluator:
                 include_debug=False,
             )
 
-            ranked_urls = [doc.url for doc in ranking_result.ranked_documents if doc.url]
+            ranked_urls = [_normalize_url(doc.url) for doc in ranking_result.ranked_documents if doc.url]
 
             # Metrics (mandatory)
             p10 = precision_at_k(ranked_urls, relevant_urls, k=10)
