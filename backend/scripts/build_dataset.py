@@ -1,19 +1,13 @@
 import time
-from tqdm import tqdm
-import os
 import json
-from collections import defaultdict
-
+from tqdm import tqdm
 from crawler.url_discovery import get_sitemap_urls
-from crawler.article_extractor import (
-    fetch_and_extract,
-    fetch_and_extract_prothomalo,
-    fetch_and_extract_dhakatribune,
-)
+from crawler.article_extractor import fetch_and_extract
 from crawler.validate_and_save import to_record, append_jsonl
 
-CRAWL_DELAY = 1.0  
+CRAWL_DELAY = 1.0  # polite delay
 
+<<<<<<< HEAD
 TOPIC_KEYWORDS = {
     "sports": ["sport", "match", "tournament", "goal", "cricket", "football", "বিশ্বকাপ", "ম্যাচ", "খেলা"],
     "politics": ["election", "minister", "parliament", "government", "নির্বাচন", "মন্ত্রী", "সরকার"],
@@ -127,54 +121,24 @@ def to_record_force_en(doc):
 
 
 def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int, max_urls: int = 5000):
+=======
+def build_for_site(site_base: str, out_path: str, expected_language: str, limit: int):
+>>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
     urls = get_sitemap_urls(site_base)
 
-    stats = {
-        "total_urls": len(urls),
-        "scanned": 0,
-        "prefilter_skips": 0,
-        "deduped_skips": 0,
-        "fetch_or_extract_failed": 0,
-        "lang_reject": 0,
-        "saved": 0,
-    }
+    kept = 0
+    seen = set()
 
-    # Avoid duplicates across runs
-    seen = load_existing_urls(out_path)
-
-    
-    topic_counts = defaultdict(int)
-    TARGET_TOPICS = 6
-    MAX_PER_TOPIC = max(1, limit // TARGET_TOPICS)
-
-    for url in tqdm(urls[:max_urls], desc=f"{site_base}"):
-        if stats["saved"] >= limit:
+    for url in tqdm(urls, desc=f"{site_base}"):
+        if kept >= limit:
             break
-
-        stats["scanned"] += 1
-
-        # skip obvious non-article urls before any request
-        if should_skip_url(url):
-            stats["prefilter_skips"] += 1
-            continue
-
         if url in seen:
-            stats["deduped_skips"] += 1
             continue
         seen.add(url)
 
         try:
-           
-            if "prothomalo.com" in url:
-                doc = fetch_and_extract_prothomalo(url)
-            elif "dhakatribune.com" in url:
-                doc = fetch_and_extract_dhakatribune(url)
-            else:
-                doc = fetch_and_extract(url)
-
+            doc = fetch_and_extract(url)
             if not doc:
-                stats["fetch_or_extract_failed"] += 1
-                time.sleep(CRAWL_DELAY)
                 continue
 
             # rec = to_record(doc, expected_language)
@@ -189,6 +153,7 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
                 rec = to_record(doc, expected_language)
 
             if not rec:
+<<<<<<< HEAD
                 stats["lang_reject"] += 1
                 time.sleep(CRAWL_DELAY)
                 continue
@@ -198,37 +163,46 @@ def build_for_site(site_base: str, out_path: str, expected_language: str, limit:
             t = detect_topic(doc.get("title", ""), doc.get("body", ""), doc.get("url", url))
             if topic_counts[t] >= MAX_PER_TOPIC:
                 time.sleep(CRAWL_DELAY)
+=======
+>>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
                 continue
 
             append_jsonl(out_path, rec)
-            stats["saved"] += 1
-            topic_counts[t] += 1
-
+            kept += 1
+            time.sleep(CRAWL_DELAY)
         except Exception:
-            stats["fetch_or_extract_failed"] += 1
+            continue
 
-        time.sleep(CRAWL_DELAY)
-
-    print(f"\nSTATS for {site_base} ({expected_language}): {stats}\n")
-    return stats["saved"]
-
+    return kept
 
 def main():
-    
+    # You should load these from yaml later; hardcoding is OK for first run.
     bn_sites = [
+<<<<<<< HEAD
         "https://bangla.bdnews24.com",
         # "https://www.prothomalo.com",
         # "https://banglatribune.com",
         # "https://www.dhakapost.com",
+=======
+        "https://www.prothomalo.com",
+        "https://bangla.bdnews24.com",
+        "https://www.kalerkantho.com",
+        "https://banglatribune.com",
+        "https://www.dhakapost.com",
+>>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
     ]
-
     en_sites = [
+<<<<<<< HEAD
         # "https://www.dhakatribune.com",
         # "https://www.thedailystar.net",
+=======
+        "https://www.thedailystar.net",
+>>>>>>> b3ec56d6de321246b7d3a203717de02f7507860c
         "https://www.newagebd.net",
         "https://www.banglanews24.com",
         "https://www.dailynewnation.com",
         "https://www.daily-sun.com",
+        "https://www.dhakatribune.com",
     ]
 
     bn_out = "data/processed/bn.jsonl"
@@ -237,7 +211,8 @@ def main():
     bn_target = 2500
     en_target = 2500
 
-    quota_per_site = 800
+    # Distribute quota across 5 sites (500 each). You can adjust dynamically.
+    quota_per_site = 10
 
     total_bn = 0
     for s in bn_sites:
@@ -254,7 +229,6 @@ def main():
     print("DONE")
     print("Bangla docs:", total_bn)
     print("English docs:", total_en)
-
 
 if __name__ == "__main__":
     main()
